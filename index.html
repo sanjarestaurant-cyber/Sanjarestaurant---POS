@@ -174,6 +174,9 @@ button{cursor:pointer}
 .filebtn input{display:none}
 .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:600}
 .chk input{width:20px;height:20px;accent-color:var(--chili)}
+.profit{margin-top:8px;padding:8px 10px;border-radius:9px;background:var(--soft);font-size:14px;color:var(--muted)}
+.profit.gain{background:#E3F2E8;color:var(--leaf)}
+.profit.loss{background:#FDE3E1;color:var(--chili)}
 #print{display:none}
 @media print{
   @page{size:80mm auto;margin:3mm}
@@ -234,6 +237,16 @@ const store = { get(k, d){ try { const v = localStorage.getItem(k); return v ? J
                 set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
                 del(k){ try { localStorage.removeItem(k); } catch(e){} } };
 const CAT_CODE = {'Rice & Curry':'RC', 'Rice':'R', 'Beverages':'B'};
+const CAT_ORDER = ['Rice & Curry', 'Rice', 'Beverages'];
+const PALETTE = ['#D2352B','#F2A900','#2E7FB8','#2F7D4F','#8A4FBF','#D9731A','#2A9D8F','#B83280'];
+/** Categories that currently have items (known ones first, then the rest A–Z). */
+function categoriesOf(list){
+  const set = [...new Set(list.map(m => m.category).filter(Boolean))];
+  return set.sort((a, b) => { const ia = CAT_ORDER.indexOf(a), ib = CAT_ORDER.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
+}
+function catColor(c){ const i = CAT_ORDER.indexOf(c); if (i >= 0) return PALETTE[i];
+  let h = 0; for (const ch of String(c)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return PALETTE[3 + h % (PALETTE.length - 3)]; }
 function toast(msg, o = {}){
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div'); t.className = 'toast' + (o.bad ? ' bad' : ''); t.setAttribute('role','status');
@@ -258,14 +271,14 @@ async function api(action, data = {}){
 /* ===== demo backend (same rules as Code.gs) ===== */
 const Demo = (() => {
   let menu = [
-    {itemId:'RC01',name:'Chicken Rice & Curry',category:'Rice & Curry',price:450,active:true,trackStock:false,stock:0,lowStock:0},
-    {itemId:'RC02',name:'Fish Rice & Curry',category:'Rice & Curry',price:400,active:true,trackStock:false,stock:0,lowStock:0},
-    {itemId:'RC03',name:'Egg Rice & Curry',category:'Rice & Curry',price:350,active:true,trackStock:false,stock:0,lowStock:0},
-    {itemId:'R01',name:'Egg Fried Rice',category:'Rice',price:550,active:true,trackStock:false,stock:0,lowStock:0},
-    {itemId:'R02',name:'Chicken Fried Rice',category:'Rice',price:750,active:true,trackStock:false,stock:0,lowStock:0},
-    {itemId:'B01',name:'Plain Tea',category:'Beverages',price:60,active:true,trackStock:false,stock:0,lowStock:0},
-    {itemId:'B02',name:'Coca-Cola 400ml',category:'Beverages',price:200,active:true,trackStock:true,stock:8,lowStock:6},
-    {itemId:'B03',name:'Water Bottle 500ml',category:'Beverages',price:100,active:true,trackStock:true,stock:0,lowStock:5}
+    {itemId:'RC01',name:'Chicken Rice & Curry',category:'Rice & Curry',price:450,cost:280,active:true,trackStock:false,stock:0,lowStock:0},
+    {itemId:'RC02',name:'Fish Rice & Curry',category:'Rice & Curry',price:400,cost:250,active:true,trackStock:false,stock:0,lowStock:0},
+    {itemId:'RC03',name:'Egg Rice & Curry',category:'Rice & Curry',price:350,cost:210,active:true,trackStock:false,stock:0,lowStock:0},
+    {itemId:'R01',name:'Egg Fried Rice',category:'Rice',price:550,cost:330,active:true,trackStock:false,stock:0,lowStock:0},
+    {itemId:'R02',name:'Chicken Fried Rice',category:'Rice',price:750,cost:460,active:true,trackStock:false,stock:0,lowStock:0},
+    {itemId:'B01',name:'Plain Tea',category:'Beverages',price:60,cost:25,active:true,trackStock:false,stock:0,lowStock:0},
+    {itemId:'B02',name:'Coca-Cola 400ml',category:'Beverages',price:200,cost:150,active:true,trackStock:true,stock:8,lowStock:6},
+    {itemId:'B03',name:'Water Bottle 500ml',category:'Beverages',price:100,cost:70,active:true,trackStock:true,stock:0,lowStock:5}
   ];
   const bills = []; let n = 0;
   const users = {owner:{pin:'1234',name:'Owner',role:'Owner'}, cashier:{pin:'1111',name:'Cashier',role:'Cashier'}};
@@ -276,13 +289,18 @@ const Demo = (() => {
     if (b.action === 'login'){ const u = users[String(b.username).toLowerCase()];
       if (!u || u.pin !== b.pin) E('Username or PIN is wrong.');
       return {token:'demo', user:{username:b.username, name:u.name, role:u.role}, shop:{categories:Object.keys(CAT_CODE), orderTypes:['Dine-in','Takeaway'], paymentMethods:['Cash','Card','Bank Transfer']}}; }
-    if (b.action === 'getMenu') return S.user.role === 'Owner' ? menu : menu.filter(m => m.active);
+    if (b.action === 'getMenu') return S.user.role === 'Owner' ? menu : menu.filter(m => m.active).map(({cost, ...r}) => r);
     if (b.action === 'saveItem'){ const it = b.item; if (!String(it.name||'').trim()) E('Add the item name.'); if (!(N(it.price) > 0)) E('Enter a price above zero.');
       let m = menu.find(k => k.itemId === it.itemId);
-      if (!m){ const pre = CAT_CODE[it.category]; const n2 = menu.filter(k => k.category === it.category).length + 1;
+      if (!m){ const same = menu.find(k => k.category === it.category);
+        const pre = same ? same.itemId.replace(/\d+$/, '') : (CAT_CODE[it.category] || it.category.split(/\s+/).map(w => w[0]).join('').replace(/[^A-Za-z]/g, '').toUpperCase() || 'X');
+        const n2 = Math.max(0, ...menu.filter(k => k.itemId.replace(/\d+$/, '') === pre).map(k => +k.itemId.match(/\d+$/)[0])) + 1;
         m = {itemId:pre + String(n2).padStart(2,'0'), stock:0, image:''}; menu.push(m); }
-      Object.assign(m, {name:it.name.trim(), category:it.category, price:Math.round(N(it.price)), active:it.active !== false, trackStock:!!it.trackStock, lowStock:N(it.lowStock)});
+      if (String(it.cost ?? '').trim() === '') E('Enter the cost price (what it costs you to make or buy).');
+      Object.assign(m, {name:it.name.trim(), category:it.category, price:Math.round(N(it.price)), cost:N(it.cost), hasCost:true, active:it.active !== false, trackStock:!!it.trackStock, lowStock:N(it.lowStock)});
       if (it.imageData) m.image = it.imageData; if (it.removeImage) m.image = ''; return {...m}; }
+    if (b.action === 'deleteItem'){ const i = menu.findIndex(k => k.itemId === b.itemId); if (i < 0) E('Item not found.');
+      const [m] = menu.splice(i, 1); return {itemId:m.itemId, name:m.name, category:m.category, categoryRemoved:!menu.some(k => k.category === m.category)}; }
     if (b.action === 'stockIn'){ const m = menu.find(k => k.itemId === b.itemId); if (!(N(b.qty) > 0)) E('Enter the quantity received.'); m.stock += N(b.qty); return {...m}; }
     if (b.action === 'logout') return true;
     if (b.action === 'saveBill'){ const x = b.bill, dup = bills.find(k => k.clientId === x.clientId); if (dup) return dup;
@@ -345,8 +363,10 @@ function totals(){
   return {lines, subtotal, discount, total, paid, change:paid - total, count:lines.reduce((a, l) => a + l.qty, 0)};
 }
 function renderPOS(){
-  const cats = ['All', ...Object.keys(CAT_CODE)];
-  const items = MENU.filter(m => (CAT === 'All' || m.category === CAT) && (!Q || m.name.toLowerCase().includes(Q.toLowerCase())));
+  const active = MENU.filter(m => m.active !== false);
+  const cats = ['All', ...categoriesOf(active)];
+  if (!cats.includes(CAT)) CAT = 'All';
+  const items = active.filter(m => (CAT === 'All' || m.category === CAT) && (!Q || m.name.toLowerCase().includes(Q.toLowerCase())));
   $('#view').innerHTML = `<div class="pos">
     <section class="menu">
       <div class="bar">
@@ -365,7 +385,7 @@ function tile(m){
   const left = m.trackStock ? m.stock - q : null;
   const info = `<span class="n">${esc(m.name)}</span>
     <span><span class="p num">${rs(m.price)}</span>${m.trackStock ? `<br><span class="s ${left <= m.lowStock ? 'low' : ''}">${left <= 0 ? 'Out of stock' : left + ' left'}</span>` : ''}</span>`;
-  return `<button class="tile stripe-${CAT_CODE[m.category] || 'R'}${m.image ? ' has-img' : ''}" data-add="${m.itemId}" ${out ? 'disabled' : ''}>
+  return `<button class="tile${m.image ? ' has-img' : ''}" style="border-top:4px solid ${catColor(m.category)}" data-add="${m.itemId}" ${out ? 'disabled' : ''}>
     ${q ? `<span class="q num">${q}</span>` : ''}${m.image ? `<span class="ph" style="background-image:url('${esc(m.image)}')" role="img" aria-label="${esc(m.name)}"></span><span class="body">${info}</span>` : info}</button>`;
 }
 function renderCart(){
@@ -483,17 +503,20 @@ async function renderMenu(){
   $('#view').innerHTML = `<div class="page"><h2>Menu</h2><p class="muted">Loading…</p></div>`;
   try { MENU = await api('getMenu'); store.set('sr-menu', MENU); } catch(e){ toast(e.message, {bad:true}); }
   if (VIEW !== 'menu') return;
-  const cats = Object.keys(CAT_CODE);
-  $('#view').innerHTML = `<div class="page"><h2>Menu</h2><p class="muted">${MENU.length} items · tap an item to change its photo, price or stock</p>
+  const cats = categoriesOf(MENU);
+  $('#view').innerHTML = `<div class="page"><h2>Menu</h2><p class="muted">${MENU.length} items in ${cats.length} categor${cats.length === 1 ? 'y' : 'ies'} · tap an item to change or remove it</p>
     <button class="save" style="margin:0 0 16px" data-edit="">+ Add item</button>
-    ${cats.map(c => { const list = MENU.filter(m => m.category === c); return `<h3 style="margin:6px 0 8px">${esc(c)}</h3>` + (list.length ? `<ul class="mlist">${list.map(m => `<li class="${m.active ? '' : 'off'}"><button data-edit="${esc(m.itemId)}">
+    ${cats.length ? '' : '<div class="empty">The menu is empty. Add your first item.</div>'}
+    ${cats.map(c => { const list = MENU.filter(m => m.category === c); return `<h3 style="margin:6px 0 8px;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${catColor(c)}"></span>${esc(c)} <span class="muted" style="margin:0;font-size:14px;font-weight:600">(${list.length})</span></h3>` + (list.length ? `<ul class="mlist">${list.map(m => `<li class="${m.active ? '' : 'off'}"><button data-edit="${esc(m.itemId)}">
       <span class="thumb" style="${m.image ? `background-image:url('${esc(m.image)}')` : ''}">${m.image ? '' : esc(m.name[0] || '?')}</span>
       <span class="g"><b>${esc(m.name)}</b><br><span class="m">${esc(m.itemId)}${m.active ? '' : ' · hidden'}${m.trackStock ? ` · ${m.stock} in stock` : ''}${m.image ? '' : ' · no photo'}</span></span>
-      <b class="num">${rs(m.price)}</b></button></li>`).join('')}</ul>` : '<p class="muted">No items yet.</p>'); }).join('')}</div>`;
+      <span class="num" style="text-align:right"><b>${rs(m.price)}</b><br>${m.hasCost === false ? '<span class="m" style="color:var(--chili);font-weight:700">No cost price</span>'
+        : `<span class="m">Cost ${rs(m.cost)} · <span style="color:${m.price - m.cost < 0 ? 'var(--chili)' : 'var(--leaf)'};font-weight:700">${m.price - m.cost < 0 ? '−' : '+'}${rs(Math.abs(m.price - m.cost))}</span></span>`}</span></button></li>`).join('')}</ul>` : '<p class="muted">No items yet.</p>'); }).join('')}</div>`;
 }
 let EDIT = null;
 function editItem(id){
-  const m = MENU.find(x => x.itemId === id) || {itemId:'', name:'', category:'Rice & Curry', price:'', active:true, trackStock:false, stock:0, lowStock:5, image:''};
+  const cats = categoriesOf(MENU);
+  const m = MENU.find(x => x.itemId === id) || {itemId:'', name:'', category:cats[0] || '', price:'', active:true, trackStock:false, stock:0, lowStock:5, image:''};
   EDIT = {imageData:null, removeImage:false, image:m.image};
   closeModal();
   const s = document.createElement('div'); s.className = 'scrim'; s.onclick = closeModal;
@@ -504,16 +527,29 @@ function editItem(id){
       <div><label class="filebtn" style="margin:0">Choose photo<input type="file" id="imgIn" accept="image/*"></label>
       ${m.image ? '<br><button type="button" class="linkbtn" id="rmImg" style="margin-top:8px">Remove photo</button>' : ''}</div></div>
     <label for="eName">Item name</label><input class="in" id="eName" value="${esc(m.name)}">
-    <div class="two"><div><label for="eCat">Category</label><select class="in" id="eCat">${Object.keys(CAT_CODE).map(c => `<option ${c === m.category ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
-      <div><label for="ePrice">Price (Rs)</label><input class="in num" id="ePrice" inputmode="numeric" value="${esc(m.price)}"></div></div>
+    <div class="two"><div><label for="eCat">Category</label><select class="in" id="eCat">${cats.map(c => `<option ${c === m.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}<option value="__new" ${cats.length ? '' : 'selected'}>+ New category…</option></select>
+      <input class="in" id="eNewCat" placeholder="New category name" maxlength="30" style="margin-top:6px" ${cats.length ? 'hidden' : ''}></div>
+      <div></div></div>
+    <div class="two"><div><label for="eCost">Cost price (Rs)</label><input class="in num" id="eCost" inputmode="decimal" value="${m.itemId && m.hasCost !== false ? esc(m.cost) : ''}" placeholder="To make or buy"></div>
+      <div><label for="ePrice">Selling price (Rs)</label><input class="in num" id="ePrice" inputmode="numeric" value="${esc(m.price)}"></div></div>
+    <div class="profit num" id="eProfit"></div>
     <label class="chk"><input type="checkbox" id="eActive" ${m.active ? 'checked' : ''}> Show on the bill screen</label>
     <label class="chk"><input type="checkbox" id="eTrack" ${m.trackStock ? 'checked' : ''}> Track stock for this item</label>
     <div class="two" id="stockBox" ${m.trackStock ? '' : 'hidden'}><div><label for="eLow">Warn when stock is at</label><input class="in num" id="eLow" inputmode="numeric" value="${esc(m.lowStock)}"></div>
       <div><label for="eAdd">Add stock now ${m.itemId ? `(now ${m.stock})` : ''}</label><input class="in num" id="eAdd" inputmode="numeric" placeholder="0"></div></div>
-    <div class="mbtns"><button class="btn dark" id="eSave">${m.itemId ? 'Save changes' : 'Add item'}</button><button class="btn ghost" id="eCancel">Cancel</button></div>`;
+    <div class="mbtns"><button class="btn dark" id="eSave">${m.itemId ? 'Save changes' : 'Add item'}</button><button class="btn ghost" id="eCancel">Cancel</button></div>
+    ${m.itemId ? `<button class="btn ghost" id="eDel" style="width:100%;margin-top:8px;color:var(--chili)">Remove from menu</button>` : ''}`;
   document.body.append(s, d);
   d.dataset.id = m.itemId;
+  const showProfit = () => { const c = $('#eCost').value, p = N($('#ePrice').value), el = $('#eProfit');
+    if (c === '' || !p){ el.className = 'profit'; el.textContent = 'Enter both prices to see the profit.'; return; }
+    const pr = p - N(c), mg = Math.round(pr / p * 1000) / 10;
+    el.className = 'profit ' + (pr < 0 ? 'loss' : 'gain');
+    el.innerHTML = pr < 0 ? `Loss of <b>${rs(-pr)}</b> on each one. The cost is higher than the selling price.` : `Profit <b>${rs(pr)}</b> on each one · <b>${mg}%</b> margin`; };
+  $('#eCost').oninput = showProfit; $('#ePrice').oninput = showProfit; showProfit();
   $('#eTrack').onchange = e => $('#stockBox').hidden = !e.target.checked;
+  $('#eCat').onchange = e => { const n = $('#eNewCat'); n.hidden = e.target.value !== '__new'; if (!n.hidden) n.focus(); };
+  const del = $('#eDel'); if (del) del.onclick = () => deleteItem(m);
   $('#eCancel').onclick = closeModal;
   $('#imgIn').onchange = async e => { const f = e.target.files[0]; if (!f) return;
     try { EDIT.imageData = await shrink(f); EDIT.removeImage = false; const p = $('#prev'); p.style.backgroundImage = `url('${EDIT.imageData}')`; p.textContent = ''; }
@@ -534,7 +570,11 @@ function shrink(file, max = 600){
 let savingItem = false;
 async function saveItem(){
   if (savingItem) return; const b = $('#eSave'), id = document.querySelector('.modal').dataset.id;
-  const item = {itemId:id || undefined, name:$('#eName').value, category:$('#eCat').value, price:$('#ePrice').value,
+  const cat = $('#eCat').value === '__new' ? $('#eNewCat').value.trim() : $('#eCat').value;
+  if (!cat){ toast('Type a name for the new category.', {bad:true}); $('#eNewCat').focus(); return; }
+  if ($('#eCost').value.trim() === ''){ toast('Enter the cost price (what it costs you to make or buy).', {bad:true}); $('#eCost').focus(); return; }
+  if (N($('#eCost').value) > N($('#ePrice').value) && !confirm('The cost is higher than the selling price, so you’ll lose money on each one. Save anyway?')) return;
+  const item = {itemId:id || undefined, name:$('#eName').value, category:cat, price:$('#ePrice').value, cost:$('#eCost').value,
     active:$('#eActive').checked, trackStock:$('#eTrack').checked, lowStock:$('#eLow').value,
     imageData:EDIT.imageData || undefined, removeImage:EDIT.removeImage || undefined};
   savingItem = true; b.disabled = true; b.textContent = EDIT.imageData ? 'Uploading photo…' : 'Saving…';
@@ -545,6 +585,18 @@ async function saveItem(){
     closeModal(); toast(`Saved ${saved.name}`); renderMenu();
   } catch(e){ toast(e.message, {bad:true}); b.disabled = false; b.textContent = 'Save changes'; }
   finally { savingItem = false; }
+}
+async function deleteItem(m){
+  const lastInCat = MENU.filter(x => x.category === m.category).length === 1;
+  const msg = `Remove “${m.name}” from the menu?\n\nPast bills keep this item.` + (lastInCat ? `\n\nIt’s the last item in “${m.category}”, so that category will be removed too.` : '');
+  if (!confirm(msg)) return;
+  const b = $('#eDel'); b.disabled = true; b.textContent = 'Removing…';
+  try {
+    const r = await api('deleteItem', {itemId:m.itemId});
+    if (CART.items[m.itemId]){ delete CART.items[m.itemId]; saveCart(); }
+    MENU = MENU.filter(x => x.itemId !== m.itemId); store.set('sr-menu', MENU);
+    closeModal(); toast(r.categoryRemoved ? `Removed ${r.name} and the “${r.category}” category` : `Removed ${r.name}`); renderMenu();
+  } catch(e){ toast(e.message, {bad:true}); b.disabled = false; b.textContent = 'Remove from menu'; }
 }
 document.addEventListener('click', e => { if (VIEW === 'menu'){ const b = e.target.closest('[data-edit]'); if (b) editItem(b.dataset.edit); } });
 
