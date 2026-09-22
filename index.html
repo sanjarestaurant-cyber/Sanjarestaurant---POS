@@ -153,6 +153,27 @@ button{cursor:pointer}
 .toast.bad{background:var(--chili)}
 .toast button{margin-left:10px;border:0;background:var(--turmeric);color:var(--char);border-radius:6px;padding:4px 10px;font-weight:800}
 
+/* item images */
+.tile.has-img{padding:0;overflow:hidden}
+.tile .ph{display:block;aspect-ratio:4/3;background:var(--soft) center/cover no-repeat;border-bottom:1px solid var(--line)}
+.tile.has-img .body{display:flex;flex-direction:column;justify-content:space-between;padding:9px 11px 11px;flex:1}
+.tile.has-img .q{top:6px;right:6px}
+/* menu manager */
+.mlist{list-style:none;margin:0 0 14px;padding:0;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.mlist li+li{border-top:1px solid var(--line)}
+.mlist button{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:center;width:100%;padding:10px 14px;cursor:pointer}
+.thumb{width:54px;height:54px;border-radius:10px;background:var(--soft) center/cover no-repeat;flex:none;display:grid;place-items:center;font-weight:800;color:var(--muted);border:1px solid var(--line)}
+.mlist .g{flex:1;min-width:0}.mlist .m{font-size:13px;color:var(--muted)}
+.off{opacity:.5}
+.form label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:10px 0 4px}
+.form .in{width:100%}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.imgpick{display:flex;gap:12px;align-items:center;margin-top:4px}
+.imgpick .big{width:110px;height:82px;border-radius:12px;background:var(--soft) center/cover no-repeat;border:1px dashed var(--line);display:grid;place-items:center;color:var(--muted);font-size:12px;text-align:center;flex:none}
+.filebtn{display:inline-block;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.filebtn input{display:none}
+.chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:600}
+.chk input{width:20px;height:20px;accent-color:var(--chili)}
 #print{display:none}
 @media print{
   @page{size:80mm auto;margin:3mm}
@@ -182,7 +203,7 @@ button{cursor:pointer}
   <header class="top">
     <div class="logo">S</div>
     <div class="t">Sanja Rotti Shop<small id="who"></small></div>
-    <nav class="navs"><button data-view="pos">New bill</button><button data-view="bills">Today<span class="lg">’s bills</span></button></nav>
+    <nav class="navs"><button data-view="pos">New bill</button><button data-view="bills">Today<span class="lg">’s bills</span></button><button data-view="menu" id="navMenu" hidden>Menu</button></nav>
     <button class="out" id="outBtn">Log out</button>
   </header>
   <div class="demo" id="demoBar" hidden>Demo mode · nothing is saved to Google Sheets</div>
@@ -255,7 +276,14 @@ const Demo = (() => {
     if (b.action === 'login'){ const u = users[String(b.username).toLowerCase()];
       if (!u || u.pin !== b.pin) E('Username or PIN is wrong.');
       return {token:'demo', user:{username:b.username, name:u.name, role:u.role}, shop:{categories:Object.keys(CAT_CODE), orderTypes:['Dine-in','Takeaway'], paymentMethods:['Cash','Card','Bank Transfer']}}; }
-    if (b.action === 'getMenu') return menu.filter(m => m.active);
+    if (b.action === 'getMenu') return S.user.role === 'Owner' ? menu : menu.filter(m => m.active);
+    if (b.action === 'saveItem'){ const it = b.item; if (!String(it.name||'').trim()) E('Add the item name.'); if (!(N(it.price) > 0)) E('Enter a price above zero.');
+      let m = menu.find(k => k.itemId === it.itemId);
+      if (!m){ const pre = CAT_CODE[it.category]; const n2 = menu.filter(k => k.category === it.category).length + 1;
+        m = {itemId:pre + String(n2).padStart(2,'0'), stock:0, image:''}; menu.push(m); }
+      Object.assign(m, {name:it.name.trim(), category:it.category, price:Math.round(N(it.price)), active:it.active !== false, trackStock:!!it.trackStock, lowStock:N(it.lowStock)});
+      if (it.imageData) m.image = it.imageData; if (it.removeImage) m.image = ''; return {...m}; }
+    if (b.action === 'stockIn'){ const m = menu.find(k => k.itemId === b.itemId); if (!(N(b.qty) > 0)) E('Enter the quantity received.'); m.stock += N(b.qty); return {...m}; }
     if (b.action === 'logout') return true;
     if (b.action === 'saveBill'){ const x = b.bill, dup = bills.find(k => k.clientId === x.clientId); if (dup) return dup;
       const items = x.items.map(l => { const m = menu.find(k => k.itemId === l.itemId);
@@ -287,6 +315,7 @@ function boot(){
   if (!S){ $('#login').hidden = false; $('#app').hidden = true; setTimeout(() => $('#lu').focus(), 50); return; }
   $('#login').hidden = true; $('#app').hidden = false;
   $('#who').textContent = `${S.user.name} · ${S.user.role}`;
+  $('#navMenu').hidden = S.user.role !== 'Owner';
   show(VIEW); loadMenu();
 }
 async function loadMenu(){
@@ -304,7 +333,7 @@ $('#outBtn').onclick = () => logout();
 document.querySelector('.navs').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) show(b.dataset.view); });
 function show(v){
   VIEW = v; document.querySelectorAll('.navs button').forEach(b => b.dataset.view === v ? b.setAttribute('aria-current','page') : b.removeAttribute('aria-current'));
-  v === 'pos' ? renderPOS() : renderBills();
+  v === 'pos' ? renderPOS() : v === 'menu' ? renderMenu() : renderBills();
 }
 
 /* ===== POS ===== */
@@ -334,9 +363,10 @@ function renderPOS(){
 function tile(m){
   const q = CART.items[m.itemId] || 0, out = m.trackStock && m.stock - q <= 0 && q === 0 && m.stock <= 0;
   const left = m.trackStock ? m.stock - q : null;
-  return `<button class="tile stripe-${CAT_CODE[m.category] || 'R'}" data-add="${m.itemId}" ${out ? 'disabled' : ''}>
-    ${q ? `<span class="q num">${q}</span>` : ''}<span class="n">${esc(m.name)}</span>
-    <span><span class="p num">${rs(m.price)}</span>${m.trackStock ? `<br><span class="s ${left <= m.lowStock ? 'low' : ''}">${left <= 0 ? 'Out of stock' : left + ' left'}</span>` : ''}</span></button>`;
+  const info = `<span class="n">${esc(m.name)}</span>
+    <span><span class="p num">${rs(m.price)}</span>${m.trackStock ? `<br><span class="s ${left <= m.lowStock ? 'low' : ''}">${left <= 0 ? 'Out of stock' : left + ' left'}</span>` : ''}</span>`;
+  return `<button class="tile stripe-${CAT_CODE[m.category] || 'R'}${m.image ? ' has-img' : ''}" data-add="${m.itemId}" ${out ? 'disabled' : ''}>
+    ${q ? `<span class="q num">${q}</span>` : ''}${m.image ? `<span class="ph" style="background-image:url('${esc(m.image)}')" role="img" aria-label="${esc(m.name)}"></span><span class="body">${info}</span>` : info}</button>`;
 }
 function renderCart(){
   const el = $('#cart'); if (!el) return; const t = totals(); const wasOpen = !el.classList.contains('collapsed');
@@ -447,6 +477,76 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('[data-bill]'); if (!b) return;
   try { openReceipt(await api('getBill', {billNo:b.dataset.bill})); } catch(err){ toast(err.message, {bad:true}); }
 });
+
+/* ===== menu manager (owner) ===== */
+async function renderMenu(){
+  $('#view').innerHTML = `<div class="page"><h2>Menu</h2><p class="muted">Loading…</p></div>`;
+  try { MENU = await api('getMenu'); store.set('sr-menu', MENU); } catch(e){ toast(e.message, {bad:true}); }
+  if (VIEW !== 'menu') return;
+  const cats = Object.keys(CAT_CODE);
+  $('#view').innerHTML = `<div class="page"><h2>Menu</h2><p class="muted">${MENU.length} items · tap an item to change its photo, price or stock</p>
+    <button class="save" style="margin:0 0 16px" data-edit="">+ Add item</button>
+    ${cats.map(c => { const list = MENU.filter(m => m.category === c); return `<h3 style="margin:6px 0 8px">${esc(c)}</h3>` + (list.length ? `<ul class="mlist">${list.map(m => `<li class="${m.active ? '' : 'off'}"><button data-edit="${esc(m.itemId)}">
+      <span class="thumb" style="${m.image ? `background-image:url('${esc(m.image)}')` : ''}">${m.image ? '' : esc(m.name[0] || '?')}</span>
+      <span class="g"><b>${esc(m.name)}</b><br><span class="m">${esc(m.itemId)}${m.active ? '' : ' · hidden'}${m.trackStock ? ` · ${m.stock} in stock` : ''}${m.image ? '' : ' · no photo'}</span></span>
+      <b class="num">${rs(m.price)}</b></button></li>`).join('')}</ul>` : '<p class="muted">No items yet.</p>'); }).join('')}</div>`;
+}
+let EDIT = null;
+function editItem(id){
+  const m = MENU.find(x => x.itemId === id) || {itemId:'', name:'', category:'Rice & Curry', price:'', active:true, trackStock:false, stock:0, lowStock:5, image:''};
+  EDIT = {imageData:null, removeImage:false, image:m.image};
+  closeModal();
+  const s = document.createElement('div'); s.className = 'scrim'; s.onclick = closeModal;
+  const d = document.createElement('div'); d.className = 'modal form'; d.setAttribute('role','dialog'); d.setAttribute('aria-modal','true');
+  d.innerHTML = `<h3 style="margin:0">${m.itemId ? 'Edit ' + esc(m.name) : 'Add item'}</h3>
+    <label>Photo</label>
+    <div class="imgpick"><div class="big" id="prev" style="${m.image ? `background-image:url('${esc(m.image)}')` : ''}">${m.image ? '' : 'No photo'}</div>
+      <div><label class="filebtn" style="margin:0">Choose photo<input type="file" id="imgIn" accept="image/*"></label>
+      ${m.image ? '<br><button type="button" class="linkbtn" id="rmImg" style="margin-top:8px">Remove photo</button>' : ''}</div></div>
+    <label for="eName">Item name</label><input class="in" id="eName" value="${esc(m.name)}">
+    <div class="two"><div><label for="eCat">Category</label><select class="in" id="eCat">${Object.keys(CAT_CODE).map(c => `<option ${c === m.category ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+      <div><label for="ePrice">Price (Rs)</label><input class="in num" id="ePrice" inputmode="numeric" value="${esc(m.price)}"></div></div>
+    <label class="chk"><input type="checkbox" id="eActive" ${m.active ? 'checked' : ''}> Show on the bill screen</label>
+    <label class="chk"><input type="checkbox" id="eTrack" ${m.trackStock ? 'checked' : ''}> Track stock for this item</label>
+    <div class="two" id="stockBox" ${m.trackStock ? '' : 'hidden'}><div><label for="eLow">Warn when stock is at</label><input class="in num" id="eLow" inputmode="numeric" value="${esc(m.lowStock)}"></div>
+      <div><label for="eAdd">Add stock now ${m.itemId ? `(now ${m.stock})` : ''}</label><input class="in num" id="eAdd" inputmode="numeric" placeholder="0"></div></div>
+    <div class="mbtns"><button class="btn dark" id="eSave">${m.itemId ? 'Save changes' : 'Add item'}</button><button class="btn ghost" id="eCancel">Cancel</button></div>`;
+  document.body.append(s, d);
+  d.dataset.id = m.itemId;
+  $('#eTrack').onchange = e => $('#stockBox').hidden = !e.target.checked;
+  $('#eCancel').onclick = closeModal;
+  $('#imgIn').onchange = async e => { const f = e.target.files[0]; if (!f) return;
+    try { EDIT.imageData = await shrink(f); EDIT.removeImage = false; const p = $('#prev'); p.style.backgroundImage = `url('${EDIT.imageData}')`; p.textContent = ''; }
+    catch(err){ toast('That photo couldn’t be read. Try another one.', {bad:true}); } };
+  const rm = $('#rmImg'); if (rm) rm.onclick = () => { EDIT.removeImage = true; EDIT.imageData = null; const p = $('#prev'); p.style.backgroundImage = ''; p.textContent = 'No photo'; };
+  $('#eSave').onclick = saveItem;
+  $('#eName').focus();
+}
+function shrink(file, max = 600){
+  return new Promise((ok, bad) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const r = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.8)); };
+    img.onerror = bad; img.src = url;
+  });
+}
+let savingItem = false;
+async function saveItem(){
+  if (savingItem) return; const b = $('#eSave'), id = document.querySelector('.modal').dataset.id;
+  const item = {itemId:id || undefined, name:$('#eName').value, category:$('#eCat').value, price:$('#ePrice').value,
+    active:$('#eActive').checked, trackStock:$('#eTrack').checked, lowStock:$('#eLow').value,
+    imageData:EDIT.imageData || undefined, removeImage:EDIT.removeImage || undefined};
+  savingItem = true; b.disabled = true; b.textContent = EDIT.imageData ? 'Uploading photo…' : 'Saving…';
+  try {
+    let saved = await api('saveItem', {item});
+    const add = N($('#eAdd').value);
+    if (item.trackStock && add > 0) saved = await api('stockIn', {itemId:saved.itemId, qty:add, note:'Added from Menu screen'});
+    closeModal(); toast(`Saved ${saved.name}`); renderMenu();
+  } catch(e){ toast(e.message, {bad:true}); b.disabled = false; b.textContent = 'Save changes'; }
+  finally { savingItem = false; }
+}
+document.addEventListener('click', e => { if (VIEW === 'menu'){ const b = e.target.closest('[data-edit]'); if (b) editItem(b.dataset.edit); } });
 
 boot();
 </script>
