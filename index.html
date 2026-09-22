@@ -50,7 +50,8 @@ button{cursor:pointer}
 .navs{display:flex;gap:4px;margin-left:auto;background:rgba(255,255,255,.08);border-radius:10px;padding:3px}
 .navs button{border:0;background:none;color:#fff;padding:7px 12px;border-radius:8px;font-weight:600;font-size:14px}
 .navs button[aria-current="page"]{background:var(--turmeric);color:var(--char)}
-.out{border:0;background:rgba(255,255,255,.1);color:#fff;border-radius:9px;padding:7px 10px;font-size:13px;font-weight:600}
+.out{border:0;background:var(--chili);color:#fff;border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700}
+.out:hover{background:#B82C23}
 @media (max-width:560px){.top{gap:8px;flex-wrap:wrap}.navs{order:3;width:100%;margin-left:0;overflow-x:auto}.navs button{flex:1}.out{margin-left:auto}.top .t{font-size:15px}.top .t small,.top>.logo,.lg{display:none}.navs button{padding:7px 10px;font-size:13px;white-space:nowrap}.out{padding:7px 8px;font-size:12px;white-space:nowrap}}
 .demo{background:var(--turmeric);color:var(--char);text-align:center;font-size:13px;font-weight:700;padding:5px}
 
@@ -147,6 +148,8 @@ button{cursor:pointer}
 .mbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .btn{border:0;border-radius:11px;padding:12px;font-weight:800;font-size:15px}
 .btn.dark{background:var(--char);color:#fff}
+.btn.yellow{background:var(--turmeric);color:var(--char)}
+.btn.yellow:hover{background:#DB9900}
 .btn.ghost{background:var(--soft);border:1px solid var(--line)}
 .ok{text-align:center;color:var(--leaf);font-weight:800;font-size:22px;margin:0 0 10px}
 .toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:80;background:var(--char);color:#fff;padding:11px 16px;border-radius:10px;font-weight:600;max-width:90vw;text-align:center}
@@ -180,7 +183,13 @@ button{cursor:pointer}
 .dk div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
 .dk small{display:block;color:var(--muted);font-weight:700;font-size:12px}
 .dk b{font-size:22px}
-.dk .pf b{color:var(--leaf)} .dk .pf.neg b{color:var(--chili)}
+.dk .pf b{color:var(--leaf)}
+.pays{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.pays div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;border-top:4px solid var(--c)}
+.pays small{display:block;color:var(--muted);font-weight:700;font-size:12px}
+.pays b{font-size:20px}
+.pays span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+@media (max-width:420px){.pays b{font-size:16px}} .dk .pf.neg b{color:var(--chili)}
 .dcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 .dcard h3{margin:0 0 10px;font-size:16px}
 .hb{display:grid;grid-template-columns:110px 1fr 90px;gap:8px;align-items:center;font-size:14px;padding:4px 0}
@@ -192,6 +201,17 @@ button{cursor:pointer}
 .tbl .r{text-align:right}
 .warn{background:#FFF1D6;color:#8A5A00;border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
 .d2{display:grid;grid-template-columns:1fr;gap:0 12px}@media (min-width:760px){.d2{grid-template-columns:1fr 1fr}}
+.scan{display:flex;gap:8px;margin-bottom:12px}
+.scan .in{flex:1;font-size:17px;padding:11px 12px;border-width:2px}
+.scan .in:focus{border-color:var(--turmeric)}
+.cambtn{border:0;border-radius:10px;background:var(--char);color:#fff;padding:0 14px;font-weight:700;display:flex;align-items:center;gap:6px;font-size:15px;white-space:nowrap}
+.cambtn svg{width:20px;height:20px}
+.tile .code{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px}
+.cam video{width:100%;border-radius:12px;background:#000;aspect-ratio:4/3;object-fit:cover;display:block}
+.cam .frame{position:relative}
+.cam .frame::after{content:"";position:absolute;left:12%;right:12%;top:38%;height:24%;border:3px solid var(--turmeric);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+.cam .st{margin:10px 0 0;font-size:14px;color:var(--muted);text-align:center}
+.bcrow{display:flex;gap:8px}.bcrow .in{flex:1}
 .profit{margin-top:8px;padding:8px 10px;border-radius:9px;background:var(--soft);font-size:14px;color:var(--muted)}
 .profit.gain{background:#E3F2E8;color:var(--leaf)}
 .profit.loss{background:#FDE3E1;color:var(--chili)}
@@ -295,7 +315,7 @@ const Demo = (() => {
     {itemId:'R01',name:'Egg Fried Rice',category:'Rice',price:550,cost:330,active:true,trackStock:false,stock:0,lowStock:0},
     {itemId:'R02',name:'Chicken Fried Rice',category:'Rice',price:750,cost:460,active:true,trackStock:false,stock:0,lowStock:0},
     {itemId:'B01',name:'Plain Tea',category:'Beverages',price:60,cost:25,active:true,trackStock:false,stock:0,lowStock:0},
-    {itemId:'B02',name:'Coca-Cola 400ml',category:'Beverages',price:200,cost:150,active:true,trackStock:true,stock:8,lowStock:6},
+    {itemId:'B02',name:'Coca-Cola 400ml',category:'Beverages',price:200,cost:150,active:true,trackStock:true,stock:8,lowStock:6,barcode:'4792024011056'},
     {itemId:'B03',name:'Water Bottle 500ml',category:'Beverages',price:100,cost:70,active:true,trackStock:true,stock:0,lowStock:5}
   ];
   const bills = []; let n = 0;
@@ -315,7 +335,9 @@ const Demo = (() => {
         const n2 = Math.max(0, ...menu.filter(k => k.itemId.replace(/\d+$/, '') === pre).map(k => +k.itemId.match(/\d+$/)[0])) + 1;
         m = {itemId:pre + String(n2).padStart(2,'0'), stock:0, image:''}; menu.push(m); }
       if (String(it.cost ?? '').trim() === '') E('Enter the cost price (what it costs you to make or buy).');
-      Object.assign(m, {name:it.name.trim(), category:it.category, price:Math.round(N(it.price)), cost:N(it.cost), hasCost:true, active:it.active !== false, trackStock:!!it.trackStock, lowStock:N(it.lowStock)});
+      const bc = String(it.barcode || '').trim(); const clash = bc && menu.find(k => (k.barcode === bc || k.itemId.toUpperCase() === bc.toUpperCase()) && k.itemId !== it.itemId);
+      if (clash) E(`That barcode is already used by ${clash.name}.`);
+      Object.assign(m, {name:it.name.trim(), category:it.category, price:Math.round(N(it.price)), cost:N(it.cost), hasCost:true, barcode:String(it.barcode || '').trim(), active:it.active !== false, trackStock:!!it.trackStock, lowStock:N(it.lowStock)});
       if (it.imageData) m.image = it.imageData; if (it.removeImage) m.image = ''; return {...m}; }
     if (b.action === 'deleteItem'){ const i = menu.findIndex(k => k.itemId === b.itemId); if (i < 0) E('Item not found.');
       const [m] = menu.splice(i, 1); return {itemId:m.itemId, name:m.name, category:m.category, categoryRemoved:!menu.some(k => k.category === m.category)}; }
@@ -397,24 +419,27 @@ function renderPOS(){
   const active = MENU.filter(m => m.active !== false);
   const cats = ['All', ...categoriesOf(active)];
   if (!cats.includes(CAT)) CAT = 'All';
-  const items = active.filter(m => (CAT === 'All' || m.category === CAT) && (!Q || m.name.toLowerCase().includes(Q.toLowerCase())));
+  const items = active.filter(m => (CAT === 'All' || m.category === CAT) && (!Q || [m.name, m.itemId, m.barcode].some(v => String(v || '').toLowerCase().includes(Q.trim().toLowerCase()))));
   $('#view').innerHTML = `<div class="pos">
     <section class="menu">
       <div class="bar">
         <div class="seg" role="group" aria-label="Order type">${['Dine-in','Takeaway'].map(t => `<button data-type="${t}" aria-pressed="${CART.orderType === t}">${t}</button>`).join('')}</div>
         ${CART.orderType === 'Dine-in' ? `<input class="in table-in num" id="tableNo" inputmode="numeric" placeholder="Table" value="${esc(CART.tableNo)}" aria-label="Table number">` : ''}
-        <input class="in search" id="q" placeholder="Search items" value="${esc(Q)}" aria-label="Search items">
+        <input class="in search" id="q" placeholder="Search by name or code" value="${esc(Q)}" aria-label="Search by name or code">
       </div>
+      <div class="scan"><input class="in num" id="scan" placeholder="Scan barcode or type item code (e.g. RC01)" autocomplete="off" autocapitalize="characters" enterkeyhint="done" aria-label="Scan barcode or type item code">
+        <button class="cambtn" id="camBtn" aria-label="Scan with camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 8v8M11 8v8M14 8v8M17 8v8"/></svg><span class="lg">Camera</span></button></div>
       <div class="cats">${cats.map(c => `<button data-cat="${c}" aria-pressed="${CAT === c}">${c}</button>`).join('')}</div>
       ${MENU.length ? (items.length ? `<div class="grid">${items.map(tile).join('')}</div>` : `<div class="empty">No items match “${esc(Q)}”.</div>`) : '<div class="empty">Loading menu…</div>'}
     </section>
     <aside class="cart collapsed" id="cart"></aside></div>`;
   renderCart();
+  if (matchMedia('(min-width:880px)').matches && !document.querySelector('.modal')) $('#scan')?.focus();
 }
 function tile(m){
   const q = CART.items[m.itemId] || 0, out = m.trackStock && m.stock - q <= 0 && q === 0 && m.stock <= 0;
   const left = m.trackStock ? m.stock - q : null;
-  const info = `<span class="n">${esc(m.name)}</span>
+  const info = `<span><span class="code">${esc(m.itemId)}</span><br><span class="n">${esc(m.name)}</span></span>
     <span><span class="p num">${rs(m.price)}</span>${m.trackStock ? `<br><span class="s ${left <= m.lowStock ? 'low' : ''}">${left <= 0 ? 'Out of stock' : left + ' left'}</span>` : ''}</span>`;
   return `<button class="tile${m.image ? ' has-img' : ''}" style="border-top:4px solid ${catColor(m.category)}" data-add="${m.itemId}" ${out ? 'disabled' : ''}>
     ${q ? `<span class="q num">${q}</span>` : ''}${m.image ? `<span class="ph" style="background-image:url('${esc(m.image)}')" role="img" aria-label="${esc(m.name)}"></span><span class="body">${info}</span>` : info}</button>`;
@@ -452,6 +477,7 @@ document.addEventListener('click', e => {
   if (t.closest('#peek')){ $('#cart').classList.toggle('collapsed'); $('#peek').setAttribute('aria-expanded', !$('#cart').classList.contains('collapsed')); return; }
   if (t.id === 'clear'){ if (confirm('Clear this bill?')){ CART = freshCart(); saveCart(); renderPOS(); } return; }
   if (t.id === 'saveBtn') saveBill();
+  if (t.closest('#camBtn')) openCamera(code => addByCode(code));
 });
 document.addEventListener('input', e => {
   if (VIEW !== 'pos') return; const id = e.target.id;
@@ -468,6 +494,76 @@ function changeQty(id, d){
   if (d > 0 && m.trackStock && q > m.stock){ toast(`Only ${m.stock} ${m.name} left in stock.`, {bad:true}); return; }
   q ? CART.items[id] = q : delete CART.items[id]; saveCart(); refreshTilesAndCart();
 }
+/* ===== code / barcode entry ===== */
+function findByCode(code){
+  const c = String(code || '').trim(); if (!c) return null;
+  return MENU.find(m => m.active !== false && ((m.barcode && m.barcode === c) || m.itemId.toUpperCase() === c.toUpperCase())) || null;
+}
+function addByCode(code){
+  const c = String(code || '').trim(); if (!c) return false;
+  const m = findByCode(c);
+  if (!m){ beep(false); toast(`No item with code “${c}”.`, {bad:true}); return false; }
+  const before = CART.items[m.itemId] || 0; changeQty(m.itemId, +1);
+  if ((CART.items[m.itemId] || 0) > before){ beep(true); toast(`Added ${m.name} · ${CART.items[m.itemId]} on the bill`); return true; }
+  beep(false); return false;
+}
+let AC;
+function beep(ok){
+  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const o = AC.createOscillator(), g = AC.createGain();
+    o.frequency.value = ok ? 1150 : 280; g.gain.value = .08; o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime + (ok ? .09 : .25)); } catch(e){}
+}
+document.addEventListener('keydown', e => {
+  if (VIEW === 'pos' && e.target.id === 'scan' && e.key === 'Enter'){ e.preventDefault(); addByCode(e.target.value); e.target.value = ''; }
+});
+// USB / Bluetooth scanners type very fast and press Enter. Catch that even when no box is focused.
+let WEDGE = {buf:'', t:0};
+document.addEventListener('keydown', e => {
+  if (VIEW !== 'pos' || document.querySelector('.modal')) return;
+  const tag = (e.target.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  const now = Date.now(); if (now - WEDGE.t > 80) WEDGE.buf = ''; WEDGE.t = now;
+  if (e.key === 'Enter'){ if (WEDGE.buf.length >= 3){ e.preventDefault(); addByCode(WEDGE.buf); } WEDGE.buf = ''; return; }
+  if (e.key.length === 1) WEDGE.buf += e.key;
+});
+
+/* ===== camera scanner ===== */
+let CAM = null;
+async function openCamera(onCode, single){
+  closeCamera();
+  const wrap = document.createElement('div'); wrap.className = 'scrim'; wrap.style.zIndex = 70;
+  const box = document.createElement('div'); box.className = 'modal cam'; box.style.zIndex = 71; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true');
+  box.innerHTML = `<h3 style="margin:0 0 10px">Scan barcode</h3><div class="frame"><video id="camV" playsinline muted></video></div>
+    <p class="st" id="camSt">Starting camera…</p><button class="btn dark" style="width:100%;margin-top:10px" id="camDone">${single ? 'Cancel' : 'Done'}</button>`;
+  document.body.append(wrap, box);
+  CAM = {wrap, box, stop:null, last:'', lastT:0};
+  wrap.onclick = closeCamera; box.querySelector('#camDone').onclick = closeCamera;
+  const video = box.querySelector('#camV'), st = box.querySelector('#camSt');
+  const hit = code => { const now = Date.now(); if (code === CAM.last && now - CAM.lastT < 1800) return; CAM.last = code; CAM.lastT = now;
+    const ok = onCode(code); st.textContent = ok ? `✓ ${code}` : `Not found: ${code}`; if (single && ok) closeCamera(); };
+  try {
+    if ('BarcodeDetector' in window){
+      const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      if (!CAM) { stream.getTracks().forEach(t => t.stop()); return; }
+      video.srcObject = stream; await video.play();
+      const formats = await BarcodeDetector.getSupportedFormats(); const det = new BarcodeDetector({formats});
+      let on = true; CAM.stop = () => { on = false; stream.getTracks().forEach(t => t.stop()); };
+      st.textContent = 'Point the camera at the barcode.';
+      const loop = async () => { if (!on) return; try { const r = await det.detect(video); if (r[0]) hit(r[0].rawValue); } catch(e){} setTimeout(loop, 200); };
+      loop();
+    } else {
+      if (!window.ZXingBrowser) await new Promise((ok, bad) => { const sc = document.createElement('script');
+        sc.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/zxing-browser.min.js'; sc.onload = ok; sc.onerror = bad; document.head.appendChild(sc); });
+      if (!CAM) return;
+      const reader = new ZXingBrowser.BrowserMultiFormatReader();
+      st.textContent = 'Point the camera at the barcode.';
+      const controls = await reader.decodeFromVideoDevice(undefined, video, res => { if (res) hit(res.getText()); });
+      CAM.stop = () => controls.stop();
+    }
+  } catch(e){
+    st.textContent = /Permission|NotAllowed/i.test(e && (e.name || e.message)) ? 'Camera access was blocked. Allow the camera for this site in your browser settings.' : 'The camera couldn’t start here. Use the code box or a USB scanner instead.';
+  }
+}
+function closeCamera(){ if (!CAM) return; try { CAM.stop && CAM.stop(); } catch(e){} CAM.wrap.remove(); CAM.box.remove(); CAM = null; const s = $('#scan'); s && s.focus(); }
+
 let saving = false;
 async function saveBill(){
   if (saving) return; const t = totals();
@@ -505,7 +601,7 @@ function openReceipt(b, fresh){
   m.querySelector('#clBtn').onclick = closeModal; m.querySelector('#prBtn').focus();
 }
 function closeModal(){ document.querySelectorAll('.scrim,.modal').forEach(x => x.remove()); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if (CAM) closeCamera(); else closeModal(); } });
 
 /* ===== today's bills ===== */
 async function renderBills(){
@@ -563,17 +659,21 @@ function editItem(id){
     <div class="two"><div><label for="eCost">Cost price (Rs)</label><input class="in num" id="eCost" inputmode="decimal" value="${m.itemId && m.hasCost !== false ? esc(m.cost) : ''}" placeholder="To make or buy"></div>
       <div><label for="ePrice">Selling price (Rs)</label><input class="in num" id="ePrice" inputmode="numeric" value="${esc(m.price)}"></div></div>
 
+    <label for="eBar">Barcode <span style="font-weight:500">(optional${m.itemId ? ' · item code ' + esc(m.itemId) + ' also works' : ''})</span></label>
+    <div class="bcrow"><input class="in num" id="eBar" value="${esc(m.barcode || '')}" placeholder="Scan or type the barcode" autocomplete="off"><button type="button" class="cambtn" id="eBarCam" aria-label="Scan barcode with camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 8v8M11 8v8M14 8v8M17 8v8"/></svg></button></div>
     <label class="chk"><input type="checkbox" id="eActive" ${m.active ? 'checked' : ''}> Show on the bill screen</label>
     <label class="chk"><input type="checkbox" id="eTrack" ${m.trackStock ? 'checked' : ''}> Track stock for this item</label>
     <div class="two" id="stockBox" ${m.trackStock ? '' : 'hidden'}><div><label for="eLow">Warn when stock is at</label><input class="in num" id="eLow" inputmode="numeric" value="${esc(m.lowStock)}"></div>
       <div><label for="eAdd">Add stock now ${m.itemId ? `(now ${m.stock})` : ''}</label><input class="in num" id="eAdd" inputmode="numeric" placeholder="0"></div></div>
-    <div class="mbtns"><button class="btn dark" id="eSave">${m.itemId ? 'Save changes' : 'Add item'}</button><button class="btn ghost" id="eCancel">Cancel</button></div>
+    <div class="mbtns"><button class="btn yellow" id="eSave">${m.itemId ? 'Save changes' : 'Add item'}</button><button class="btn ghost" id="eCancel">Cancel</button></div>
     ${m.itemId ? `<button class="btn ghost" id="eDel" style="width:100%;margin-top:8px;color:var(--chili)">Remove from menu</button>` : ''}`;
   document.body.append(s, d);
   d.dataset.id = m.itemId;
   $('#eTrack').onchange = e => $('#stockBox').hidden = !e.target.checked;
   $('#eCat').onchange = e => { const n = $('#eNewCat'); n.hidden = e.target.value !== '__new'; if (!n.hidden) n.focus(); };
   const del = $('#eDel'); if (del) del.onclick = () => deleteItem(m);
+  $('#eBar').onkeydown = e => { if (e.key === 'Enter') e.preventDefault(); };
+  $('#eBarCam').onclick = () => openCamera(code => { $('#eBar').value = code; beep(true); return true; }, true);
   $('#eCancel').onclick = closeModal;
   $('#imgIn').onchange = async e => { const f = e.target.files[0]; if (!f) return;
     try { EDIT.imageData = await shrink(f); EDIT.removeImage = false; const p = $('#prev'); p.style.backgroundImage = `url('${EDIT.imageData}')`; p.textContent = ''; }
@@ -598,7 +698,7 @@ async function saveItem(){
   if (!cat){ toast('Type a name for the new category.', {bad:true}); $('#eNewCat').focus(); return; }
   if ($('#eCost').value.trim() === ''){ toast('Enter the cost price (what it costs you to make or buy).', {bad:true}); $('#eCost').focus(); return; }
   if (N($('#eCost').value) > N($('#ePrice').value) && !confirm('The cost price is higher than the selling price. Save anyway?')) return;
-  const item = {itemId:id || undefined, name:$('#eName').value, category:cat, price:$('#ePrice').value, cost:$('#eCost').value,
+  const item = {itemId:id || undefined, name:$('#eName').value, category:cat, price:$('#ePrice').value, cost:$('#eCost').value, barcode:$('#eBar').value.trim(),
     active:$('#eActive').checked, trackStock:$('#eTrack').checked, lowStock:$('#eLow').value,
     imageData:EDIT.imageData || undefined, removeImage:EDIT.removeImage || undefined};
   savingItem = true; b.disabled = true; b.textContent = EDIT.imageData ? 'Uploading photo…' : 'Saving…';
@@ -658,12 +758,13 @@ async function renderDash(){
       <div><small>Average bill</small><b>${rs(d.averageBill)}</b></div>
       <div><small>Discounts given</small><b>${rs(d.discount)}</b></div>
     </div>
+    <div class="pays num">${[['Cash','#2F7D4F'],['Card','#2E7FB8'],['Bank Transfer','#8A4FBF']].map(([k, c]) => { const v = (d.byPayment.find(x => x.name === k) || {value:0}).value;
+      return `<div style="--c:${c}"><small>${k}</small><b>${rs(v)}</b><span>${d.sales ? Math.round(v / d.sales * 100) : 0}% of sales</span></div>`; }).join('')}</div>
     <div class="dcard"><h3>Top items</h3>${d.topItems.length ? `<table class="tbl num"><thead><tr><th>Item</th><th class="r">Sold</th><th class="r">Sales</th><th class="r">Profit</th></tr></thead><tbody>
       ${d.topItems.map(i => `<tr><td>${esc(i.name)}</td><td class="r">${i.qty}</td><td class="r">${rs(i.sales)}</td><td class="r" style="color:${i.profit < 0 ? 'var(--chili)' : 'var(--leaf)'}">${rs(i.profit)}</td></tr>`).join('')}</tbody></table>`
       : '<div class="empty" style="padding:12px">No sales in this period.</div>'}</div>
     <div class="d2">
       <div class="dcard"><h3>By category</h3>${bars(d.byCategory)}</div>
-      <div class="dcard"><h3>By payment</h3>${bars(d.byPayment)}</div>
       <div class="dcard"><h3>Dine-in vs Takeaway</h3>${bars(d.byOrderType)}</div>
       <div class="dcard"><h3>${d.from === d.to ? 'By hour' : 'By day'}</h3>${bars(d.from === d.to ? hours : d.byDay)}</div>
     </div>
