@@ -507,6 +507,17 @@ body::before{background:radial-gradient(36vmax 30vmax at 10% 0%, var(--blob1), t
 .logo-prev{background-size:contain!important;background-repeat:no-repeat!important}
 .logo-prev svg{color:var(--gold)}
 
+
+/* ===== phone layout: bottom tabs for Menu & Dashboard ===== */
+@media (max-width:879px){
+  .navs #navMenu,.navs #navDash{display:none!important}
+  body[data-view="menu"] .navs,body[data-view="dash"] .navs{display:none!important}
+  .tabbar:not([hidden]){display:flex!important}
+  body.has-tabbar .cart{bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;max-height:calc(86vh - 88px)!important;padding-bottom:0!important}
+  body.has-tabbar .cart:not(.collapsed){border-radius:26px!important;left:8px!important;right:8px!important}
+  body.has-tabbar .menu{padding-bottom:230px!important}
+}
+
 #print{display:none}
 @media print{
   @page{size:80mm auto;margin:3mm}
@@ -714,6 +725,7 @@ function boot(){
   applyBrand();
   $('#navMenu').hidden = $('#navDash').hidden = S.user.role !== 'Owner';
   $('#tabbar').hidden = S.user.role !== 'Owner';
+  document.body.classList.toggle('has-tabbar', S.user.role === 'Owner');
   document.querySelectorAll('.tabbar [data-ic]').forEach(e => e.innerHTML = IC[e.dataset.ic]);
   show(VIEW); loadMenu(); refreshTodayCount(); setTimeout(setTopH, 50);
 }
