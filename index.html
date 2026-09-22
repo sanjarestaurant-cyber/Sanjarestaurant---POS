@@ -212,6 +212,22 @@ button{cursor:pointer}
 .cam .frame::after{content:"";position:absolute;left:12%;right:12%;top:38%;height:24%;border:3px solid var(--turmeric);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
 .cam .st{margin:10px 0 0;font-size:14px;color:var(--muted);text-align:center}
 .bcrow{display:flex;gap:8px}.bcrow .in{flex:1}
+.subtabs{display:grid;grid-template-columns:1fr 1fr;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:12px}
+.subtabs button{border:0;background:none;border-radius:9px;padding:10px;font-weight:800;font-size:15px}
+.subtabs button[aria-pressed="true"]{background:var(--char);color:#fff}
+.sk{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}@media (min-width:700px){.sk{grid-template-columns:repeat(4,1fr)}}
+.sk div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;border-left:5px solid var(--c)}
+.sk small{display:block;color:var(--muted);font-weight:700;font-size:12px}.sk b{font-size:22px}
+.srow{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}
+.srow .nm{font-weight:700}.srow .m{font-size:13px;color:var(--muted)}
+.srow .qtybig{text-align:right}.srow .qtybig b{display:block;font-size:26px;line-height:1}
+.lvl{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;margin:7px 0 5px}.lvl i{display:block;height:100%;border-radius:4px}
+.pill{display:inline-block;font-size:12px;font-weight:800;border-radius:6px;padding:2px 8px}
+.pill.ok{background:#E3F2E8;color:var(--leaf)}.pill.low{background:#FFF1D6;color:#9A6400}.pill.out{background:#FDE3E1;color:var(--chili)}
+.addstk{border:1px solid var(--line);background:var(--soft);border-radius:8px;padding:6px 10px;font-weight:700;font-size:13px;margin-top:6px}
+.mv{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.mv .t{font-size:12px;font-weight:800;border-radius:6px;padding:2px 7px;background:var(--soft)}
+.mv .t.IN{background:#E3F2E8;color:var(--leaf)}.mv .t.SALE{background:#E6F0FA;color:#2E7FB8}.mv .t.VOID{background:#FFF1D6;color:#9A6400}.mv .t.ADJUST,.mv .t.REMOVED{background:#F1E7FA;color:#8A4FBF}
 .profit{margin-top:8px;padding:8px 10px;border-radius:9px;background:var(--soft);font-size:14px;color:var(--muted)}
 .profit.gain{background:#E3F2E8;color:var(--leaf)}
 .profit.loss{background:#FDE3E1;color:var(--chili)}
@@ -318,7 +334,8 @@ const Demo = (() => {
     {itemId:'B02',name:'Coca-Cola 400ml',category:'Beverages',price:200,cost:150,active:true,trackStock:true,stock:8,lowStock:6,barcode:'4792024011056'},
     {itemId:'B03',name:'Water Bottle 500ml',category:'Beverages',price:100,cost:70,active:true,trackStock:true,stock:0,lowStock:5}
   ];
-  const bills = []; let n = 0;
+  const bills = [], log = []; let n = 0;
+  const logIt = (m, type, qty) => log.push({date:today(), time:new Date().toTimeString().slice(0,5), itemId:m.itemId, name:m.name, type, qty, balance:m.stock, ref:'', by:S ? S.user.username : ''});
   const users = {owner:{pin:'1234',name:'Owner',role:'Owner'}, cashier:{pin:'1111',name:'Cashier',role:'Cashier'}};
   const today = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Colombo'}).format(new Date());
   return async b => {
@@ -341,7 +358,14 @@ const Demo = (() => {
       if (it.imageData) m.image = it.imageData; if (it.removeImage) m.image = ''; return {...m}; }
     if (b.action === 'deleteItem'){ const i = menu.findIndex(k => k.itemId === b.itemId); if (i < 0) E('Item not found.');
       const [m] = menu.splice(i, 1); return {itemId:m.itemId, name:m.name, category:m.category, categoryRemoved:!menu.some(k => k.category === m.category)}; }
-    if (b.action === 'stockIn'){ const m = menu.find(k => k.itemId === b.itemId); if (!(N(b.qty) > 0)) E('Enter the quantity received.'); m.stock += N(b.qty); return {...m}; }
+    if (b.action === 'stockIn'){ const m = menu.find(k => k.itemId === b.itemId); if (!(N(b.qty) > 0)) E('Enter the quantity received.'); m.stock += N(b.qty); logIt(m, 'IN', N(b.qty)); return {...m}; }
+    if (b.action === 'stockReport'){ const L = log.filter(x => x.date >= b.from && x.date <= b.to);
+      const items = menu.filter(m => m.trackStock).map(m => { const a = L.filter(x => x.itemId === m.itemId);
+        return {itemId:m.itemId, name:m.name, category:m.category, image:m.image || '', active:m.active, stock:m.stock, lowStock:m.lowStock, cost:m.cost || 0, value:Math.round(m.stock * (m.cost || 0)),
+          status:m.stock <= 0 ? 'out' : m.stock <= m.lowStock ? 'low' : 'ok', in:a.filter(x => x.type === 'IN').reduce((t, x) => t + x.qty, 0), sold:-a.filter(x => x.type === 'SALE').reduce((t, x) => t + x.qty, 0), adjusted:0}; })
+        .sort((x, y) => ({out:0, low:1, ok:2}[x.status] - {out:0, low:1, ok:2}[y.status]));
+      return {from:b.from, to:b.to, items, summary:{tracked:items.length, low:items.filter(i => i.status === 'low').length, out:items.filter(i => i.status === 'out').length, value:items.reduce((t, i) => t + i.value, 0)},
+        notTracked:menu.filter(m => !m.trackStock).length, movements:L.slice(-30).reverse()}; }
     if (b.action === 'logout') return true;
     if (b.action === 'saveBill'){ const x = b.bill, dup = bills.find(k => k.clientId === x.clientId); if (dup) return dup;
       const items = x.items.map(l => { const m = menu.find(k => k.itemId === l.itemId);
@@ -349,7 +373,7 @@ const Demo = (() => {
         return {itemId:m.itemId, name:m.name, category:m.category, qty:l.qty, price:m.price, lineTotal:m.price * l.qty, lineCost:(m.cost || 0) * l.qty}; });
       const subtotal = items.reduce((a, i) => a + i.lineTotal, 0), discount = Math.min(Math.round(N(x.discount)), subtotal), total = subtotal - discount;
       const paid = x.paymentMethod === 'Cash' ? Math.round(N(x.paid) || total) : total; if (paid < total) E('Amount received is less than the total.');
-      items.forEach(i => { const m = menu.find(k => k.itemId === i.itemId); if (m.trackStock) m.stock -= i.qty; });
+      items.forEach(i => { const m = menu.find(k => k.itemId === i.itemId); if (m.trackStock){ m.stock -= i.qty; logIt(m, 'SALE', -i.qty); } });
       const d = new Date(), bill = {clientId:x.clientId, billNo:`SR-${today().slice(0,4)}-${String(++n).padStart(5,'0')}`, date:today(),
         time:d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Colombo'}), orderType:x.orderType, tableNo:x.orderType === 'Dine-in' ? x.tableNo : '',
         cashier:S.user.name, subtotal, discount, total, paymentMethod:x.paymentMethod, paid, change:paid - total, status:'PAID', items};
@@ -425,16 +449,15 @@ function renderPOS(){
       <div class="bar">
         <div class="seg" role="group" aria-label="Order type">${['Dine-in','Takeaway'].map(t => `<button data-type="${t}" aria-pressed="${CART.orderType === t}">${t}</button>`).join('')}</div>
         ${CART.orderType === 'Dine-in' ? `<input class="in table-in num" id="tableNo" inputmode="numeric" placeholder="Table" value="${esc(CART.tableNo)}" aria-label="Table number">` : ''}
-        <input class="in search" id="q" placeholder="Search by name or code" value="${esc(Q)}" aria-label="Search by name or code">
+        <button class="cambtn" id="camBtn" aria-label="Scan barcode with camera" style="margin-left:auto;padding:10px 14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 8v8M11 8v8M14 8v8M17 8v8"/></svg><span class="lg">Scan</span></button>
       </div>
-      <div class="scan"><input class="in num" id="scan" placeholder="Scan barcode or type item code (e.g. RC01)" autocomplete="off" autocapitalize="characters" enterkeyhint="done" aria-label="Scan barcode or type item code">
-        <button class="cambtn" id="camBtn" aria-label="Scan with camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 8v8M11 8v8M14 8v8M17 8v8"/></svg><span class="lg">Camera</span></button></div>
+      <div class="bar"><input class="in search" id="q" placeholder="Search by name or code" value="${esc(Q)}" aria-label="Search by name or code" autocomplete="off" enterkeyhint="done"></div>
       <div class="cats">${cats.map(c => `<button data-cat="${c}" aria-pressed="${CAT === c}">${c}</button>`).join('')}</div>
       ${MENU.length ? (items.length ? `<div class="grid">${items.map(tile).join('')}</div>` : `<div class="empty">No items match “${esc(Q)}”.</div>`) : '<div class="empty">Loading menu…</div>'}
     </section>
     <aside class="cart collapsed" id="cart"></aside></div>`;
   renderCart();
-  if (matchMedia('(min-width:880px)').matches && !document.querySelector('.modal')) $('#scan')?.focus();
+
 }
 function tile(m){
   const q = CART.items[m.itemId] || 0, out = m.trackStock && m.stock - q <= 0 && q === 0 && m.stock <= 0;
@@ -513,7 +536,14 @@ function beep(ok){
     o.frequency.value = ok ? 1150 : 280; g.gain.value = .08; o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime + (ok ? .09 : .25)); } catch(e){}
 }
 document.addEventListener('keydown', e => {
-  if (VIEW === 'pos' && e.target.id === 'scan' && e.key === 'Enter'){ e.preventDefault(); addByCode(e.target.value); e.target.value = ''; }
+  if (VIEW === 'pos' && e.target.id === 'q' && e.key === 'Enter'){
+    e.preventDefault(); const v = e.target.value.trim(); if (!v) return;
+    const exact = findByCode(v);
+    if (exact){ addByCode(v); Q = ''; renderPOS(); const q = $('#q'); q && q.focus(); }
+    else { const list = MENU.filter(m => m.active !== false && [m.name, m.itemId, m.barcode].some(x => String(x || '').toLowerCase().includes(v.toLowerCase())));
+      if (list.length === 1){ changeQty(list[0].itemId, +1); beep(true); toast(`Added ${list[0].name}`); Q = ''; renderPOS(); $('#q')?.focus(); }
+      else if (!list.length){ beep(false); toast(`No item matches “${v}”.`, {bad:true}); } }
+  }
 });
 // USB / Bluetooth scanners type very fast and press Enter. Catch that even when no box is focused.
 let WEDGE = {buf:'', t:0};
@@ -562,7 +592,7 @@ async function openCamera(onCode, single){
     st.textContent = /Permission|NotAllowed/i.test(e && (e.name || e.message)) ? 'Camera access was blocked. Allow the camera for this site in your browser settings.' : 'The camera couldn’t start here. Use the code box or a USB scanner instead.';
   }
 }
-function closeCamera(){ if (!CAM) return; try { CAM.stop && CAM.stop(); } catch(e){} CAM.wrap.remove(); CAM.box.remove(); CAM = null; const s = $('#scan'); s && s.focus(); }
+function closeCamera(){ if (!CAM) return; try { CAM.stop && CAM.stop(); } catch(e){} CAM.wrap.remove(); CAM.box.remove(); CAM = null; }
 
 let saving = false;
 async function saveBill(){
@@ -725,7 +755,7 @@ async function deleteItem(m){
 /* ===== dashboard (owner only) ===== */
 const lkDate = (d = new Date()) => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Colombo'}).format(d);
 const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
-let DP = 'today', DR = {from:'', to:''};
+let DP = 'today', DR = {from:'', to:''}, DT = 'sales', SF = {f:'all', q:''};
 function dashRange(){
   const t = lkDate(), dow = (new Date(t + 'T12:00:00Z').getUTCDay() + 6) % 7;
   if (DP === 'today') return {from:t, to:t, label:'Today'};
@@ -739,9 +769,11 @@ async function renderDash(){
   const chips = [['today','Today'],['yesterday','Yesterday'],['week','This week'],['month','This month'],['custom','Pick dates']]
     .map(([k, l]) => `<button data-dp="${k}" aria-pressed="${DP === k}">${l}</button>`).join('');
   $('#view').innerHTML = `<div class="page"><h2>Dashboard</h2><p class="muted">${r.label} · ${r.from === r.to ? r.from : r.from + ' to ' + r.to}</p>
+    <div class="subtabs" role="group" aria-label="Dashboard section"><button data-dt="sales" aria-pressed="${DT === 'sales'}">Sales</button><button data-dt="stock" aria-pressed="${DT === 'stock'}">Stock</button></div>
     <div class="cats">${chips}</div>
     ${DP === 'custom' ? `<div class="bar"><input class="in" type="date" id="dFrom" value="${r.from}" aria-label="From"><input class="in" type="date" id="dTo" value="${r.to}" aria-label="To"><button class="btn dark" id="dGo">Show</button></div>` : ''}
     <div id="dBody"><p class="muted">Loading…</p></div></div>`;
+  if (DT === 'stock') return renderStock(r);
   let d;
   try { d = await api('dashboard', {from:r.from, to:r.to}); } catch(e){ $('#dBody').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
   if (VIEW !== 'dash') return;
@@ -774,9 +806,66 @@ async function renderDash(){
 document.addEventListener('click', e => {
   if (VIEW !== 'dash') return;
   const c = e.target.closest('[data-dp]'); if (c){ DP = c.dataset.dp; renderDash(); return; }
+  const dt = e.target.closest('[data-dt]'); if (dt){ DT = dt.dataset.dt; renderDash(); return; }
+  const sf = e.target.closest('[data-sf]'); if (sf){ SF.f = sf.dataset.sf; drawStock(); return; }
+  const as = e.target.closest('[data-addstk]'); if (as){ addStockDialog(as.dataset.addstk); return; }
   if (e.target.id === 'dGo'){ DR = {from:$('#dFrom').value, to:$('#dTo').value}; if (DR.to && DR.from > DR.to){ toast('The start date is after the end date.', {bad:true}); return; } renderDash(); }
   if (e.target.id === 'dRef') renderDash();
 });
+
+/* ----- stock tab ----- */
+let SR = null;
+async function renderStock(r){
+  try { SR = await api('stockReport', {from:r.from, to:r.to}); } catch(e){ $('#dBody').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (VIEW !== 'dash' || DT !== 'stock') return;
+  drawStock();
+}
+function drawStock(){
+  if (!SR) return; const s = SR.summary;
+  const list = SR.items.filter(i => (SF.f === 'all' || i.status === SF.f) && (!SF.q || [i.name, i.itemId].some(v => v.toLowerCase().includes(SF.q.toLowerCase()))));
+  const col = {ok:'var(--leaf)', low:'var(--turmeric)', out:'var(--chili)'}, lbl = {ok:'In stock', low:'Low', out:'Out of stock'};
+  const TYPE = {IN:'Stock in', SALE:'Sold', VOID:'Bill cancelled', ADJUST:'Count change', REMOVED:'Removed'};
+  $('#dBody').innerHTML = `
+    <div class="sk num">
+      <div style="--c:#2E7FB8"><small>Items tracked</small><b>${s.tracked}</b></div>
+      <div style="--c:var(--turmeric)"><small>Low stock</small><b>${s.low}</b></div>
+      <div style="--c:var(--chili)"><small>Out of stock</small><b>${s.out}</b></div>
+      <div style="--c:var(--leaf)"><small>Stock value (at cost)</small><b>${rs(s.value)}</b></div>
+    </div>
+    ${SR.notTracked ? `<div class="warn">${SR.notTracked} item${SR.notTracked === 1 ? ' doesn’t' : 's don’t'} track stock (like cooked meals). To track one, open it in Menu and tick “Track stock”.</div>` : ''}
+    <div class="bar"><div class="cats" style="margin:0">${[['all','All'],['low','Low'],['out','Out']].map(([k, l]) => `<button data-sf="${k}" aria-pressed="${SF.f === k}">${l}${k !== 'all' ? ` (${k === 'low' ? s.low : s.out})` : ''}</button>`).join('')}</div>
+      <input class="in search" id="sq" placeholder="Search stock" value="${esc(SF.q)}" aria-label="Search stock"></div>
+    ${list.length ? list.map(i => { const pct = Math.min(100, i.stock / Math.max(1, i.lowStock * 3) * 100);
+      return `<div class="srow num">
+        <span class="thumb" style="${i.image ? `background-image:url('${esc(i.image)}')` : ''}">${i.image ? '' : esc(i.name[0])}</span>
+        <div><div class="nm">${esc(i.name)} ${i.active ? '' : '<span class="m">(hidden)</span>'}</div>
+          <div class="lvl"><i style="width:${Math.max(i.stock > 0 ? 4 : 0, pct)}%;background:${col[i.status]}"></i></div>
+          <div class="m">${esc(i.itemId)} · warn at ${i.lowStock} · <span style="color:var(--leaf)">+${i.in} in</span> · ${i.sold} sold${i.adjusted ? ` · ${i.adjusted > 0 ? '+' : ''}${i.adjusted} counted` : ''} · value ${rs(i.value)}</div></div>
+        <div class="qtybig"><b style="color:${col[i.status]}">${i.stock}</b><span class="pill ${i.status}">${lbl[i.status]}</span><br><button class="addstk" data-addstk="${esc(i.itemId)}">+ Add stock</button></div></div>`; }).join('')
+      : `<div class="empty">${SR.items.length ? 'No items match.' : 'No items track stock yet. Open an item in Menu and tick “Track stock”.'}</div>`}
+    <div class="dcard" style="margin-top:12px"><h3>Stock movements</h3>${SR.movements.length ? SR.movements.map(m => `<div class="mv num">
+      <span class="t ${m.type}">${TYPE[m.type] || m.type}</span><div><b>${esc(m.name)}</b><div class="m" style="font-size:12px;color:var(--muted)">${esc(m.date)} ${esc(m.time)}${m.ref ? ' · ' + esc(m.ref) : ''}${m.by ? ' · ' + esc(m.by) : ''}</div></div>
+      <div style="text-align:right"><b style="color:${m.qty < 0 ? 'var(--chili)' : 'var(--leaf)'}">${m.qty > 0 ? '+' : ''}${m.qty}</b><div style="font-size:12px;color:var(--muted)">left ${m.balance}</div></div></div>`).join('')
+      : '<div class="empty" style="padding:12px">No stock changes in this period.</div>'}</div>
+    <button class="btn ghost" style="width:100%" id="dRef">Refresh</button>`;
+}
+document.addEventListener('input', e => { if (VIEW === 'dash' && e.target.id === 'sq'){ SF.q = e.target.value; const p = e.target.selectionStart; drawStock(); const q = $('#sq'); q.focus(); q.setSelectionRange(p, p); } });
+function addStockDialog(id){
+  const i = SR.items.find(x => x.itemId === id); if (!i) return;
+  closeModal();
+  const s = document.createElement('div'); s.className = 'scrim'; s.onclick = closeModal;
+  const d = document.createElement('div'); d.className = 'modal form'; d.setAttribute('role','dialog'); d.setAttribute('aria-modal','true');
+  d.innerHTML = `<h3 style="margin:0">Add stock · ${esc(i.name)}</h3><p class="muted" style="margin:4px 0 0">Now in stock: <b>${i.stock}</b></p>
+    <label for="asQty">Quantity received</label><input class="in num" id="asQty" inputmode="numeric" placeholder="0">
+    <label for="asNote">Note (optional)</label><input class="in" id="asNote" placeholder="e.g. Supplier bill no">
+    <div class="mbtns"><button class="btn yellow" id="asSave">Add stock</button><button class="btn ghost" id="asCancel">Cancel</button></div>`;
+  document.body.append(s, d); $('#asQty').focus();
+  $('#asCancel').onclick = closeModal;
+  $('#asSave').onclick = async () => { const b = $('#asSave'); b.disabled = true; b.textContent = 'Saving…';
+    try { const r2 = await api('stockIn', {itemId:id, qty:$('#asQty').value, note:$('#asNote').value, ref:$('#asNote').value});
+      closeModal(); toast(`${i.name}: now ${r2.stock} in stock`); renderDash(); }
+    catch(e){ toast(e.message, {bad:true}); b.disabled = false; b.textContent = 'Add stock'; } };
+}
 
 document.addEventListener('click', e => { if (VIEW === 'menu'){ const b = e.target.closest('[data-edit]'); if (b) editItem(b.dataset.edit); } });
 
