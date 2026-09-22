@@ -51,7 +51,7 @@ button{cursor:pointer}
 .navs button{border:0;background:none;color:#fff;padding:7px 12px;border-radius:8px;font-weight:600;font-size:14px}
 .navs button[aria-current="page"]{background:var(--turmeric);color:var(--char)}
 .out{border:0;background:rgba(255,255,255,.1);color:#fff;border-radius:9px;padding:7px 10px;font-size:13px;font-weight:600}
-@media (max-width:560px){.top{gap:8px}.top .t{font-size:15px}.top .t small,.top>.logo,.lg{display:none}.navs button{padding:7px 10px;font-size:13px;white-space:nowrap}.out{padding:7px 8px;font-size:12px;white-space:nowrap}}
+@media (max-width:560px){.top{gap:8px;flex-wrap:wrap}.navs{order:3;width:100%;margin-left:0;overflow-x:auto}.navs button{flex:1}.out{margin-left:auto}.top .t{font-size:15px}.top .t small,.top>.logo,.lg{display:none}.navs button{padding:7px 10px;font-size:13px;white-space:nowrap}.out{padding:7px 8px;font-size:12px;white-space:nowrap}}
 .demo{background:var(--turmeric);color:var(--char);text-align:center;font-size:13px;font-weight:700;padding:5px}
 
 /* POS layout */
@@ -174,6 +174,24 @@ button{cursor:pointer}
 .filebtn input{display:none}
 .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:600}
 .chk input{width:20px;height:20px;accent-color:var(--chili)}
+/* dashboard */
+.dk{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+@media (min-width:700px){.dk{grid-template-columns:repeat(3,1fr)}}
+.dk div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.dk small{display:block;color:var(--muted);font-weight:700;font-size:12px}
+.dk b{font-size:22px}
+.dk .pf b{color:var(--leaf)} .dk .pf.neg b{color:var(--chili)}
+.dcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.dcard h3{margin:0 0 10px;font-size:16px}
+.hb{display:grid;grid-template-columns:110px 1fr 90px;gap:8px;align-items:center;font-size:14px;padding:4px 0}
+.hb .t{height:10px;background:var(--soft);border-radius:5px;overflow:hidden}.hb .t i{display:block;height:100%;background:var(--turmeric);border-radius:5px}
+.hb .v{text-align:right;font-weight:700}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;color:var(--muted);font-size:12px;font-weight:700;padding:4px 6px;border-bottom:1px solid var(--line)}
+.tbl td{padding:6px;border-bottom:1px dashed var(--line)}
+.tbl .r{text-align:right}
+.warn{background:#FFF1D6;color:#8A5A00;border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+.d2{display:grid;grid-template-columns:1fr;gap:0 12px}@media (min-width:760px){.d2{grid-template-columns:1fr 1fr}}
 .profit{margin-top:8px;padding:8px 10px;border-radius:9px;background:var(--soft);font-size:14px;color:var(--muted)}
 .profit.gain{background:#E3F2E8;color:var(--leaf)}
 .profit.loss{background:#FDE3E1;color:var(--chili)}
@@ -206,7 +224,7 @@ button{cursor:pointer}
   <header class="top">
     <div class="logo">S</div>
     <div class="t">Sanja Rotti Shop<small id="who"></small></div>
-    <nav class="navs"><button data-view="pos">New bill</button><button data-view="bills">Today<span class="lg">’s bills</span></button><button data-view="menu" id="navMenu" hidden>Menu</button></nav>
+    <nav class="navs"><button data-view="pos">New bill</button><button data-view="bills">Today<span class="lg">’s bills</span></button><button data-view="menu" id="navMenu" hidden>Menu</button><button data-view="dash" id="navDash" hidden>Dashboard</button></nav>
     <button class="out" id="outBtn">Log out</button>
   </header>
   <div class="demo" id="demoBar" hidden>Demo mode · nothing is saved to Google Sheets</div>
@@ -306,16 +324,28 @@ const Demo = (() => {
     if (b.action === 'saveBill'){ const x = b.bill, dup = bills.find(k => k.clientId === x.clientId); if (dup) return dup;
       const items = x.items.map(l => { const m = menu.find(k => k.itemId === l.itemId);
         if (m.trackStock && m.stock < l.qty) E(`Only ${m.stock} ${m.name} left in stock.`);
-        return {itemId:m.itemId, name:m.name, qty:l.qty, price:m.price, lineTotal:m.price * l.qty}; });
+        return {itemId:m.itemId, name:m.name, category:m.category, qty:l.qty, price:m.price, lineTotal:m.price * l.qty, lineCost:(m.cost || 0) * l.qty}; });
       const subtotal = items.reduce((a, i) => a + i.lineTotal, 0), discount = Math.min(Math.round(N(x.discount)), subtotal), total = subtotal - discount;
       const paid = x.paymentMethod === 'Cash' ? Math.round(N(x.paid) || total) : total; if (paid < total) E('Amount received is less than the total.');
       items.forEach(i => { const m = menu.find(k => k.itemId === i.itemId); if (m.trackStock) m.stock -= i.qty; });
       const d = new Date(), bill = {clientId:x.clientId, billNo:`SR-${today().slice(0,4)}-${String(++n).padStart(5,'0')}`, date:today(),
         time:d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Colombo'}), orderType:x.orderType, tableNo:x.orderType === 'Dine-in' ? x.tableNo : '',
         cashier:S.user.name, subtotal, discount, total, paymentMethod:x.paymentMethod, paid, change:paid - total, status:'PAID', items};
-      bills.push(bill); return bill; }
-    if (b.action === 'listBills') return bills.slice().reverse();
-    if (b.action === 'getBill') return bills.find(k => k.billNo === b.billNo);
+      bills.push(bill); return {...bill, items:items.map(({lineCost, category, ...i}) => i)}; }
+    if (b.action === 'listBills') return bills.slice().reverse().map(({items, ...x}) => x);
+    if (b.action === 'dashboard'){ if (S.user.role !== 'Owner') E('You don’t have access to this.');
+      const L = bills.filter(x => x.status !== 'VOID' && x.date >= b.from && x.date <= b.to), its = L.flatMap(x => x.items);
+      const sum = (a, f) => a.reduce((s, x) => s + f(x), 0), grp = (a, k, f) => { const m = {}; a.forEach(x => m[x[k]] = (m[x[k]] || 0) + f(x));
+        return Object.entries(m).map(([name, value]) => ({name, value})).sort((p, q) => q.value - p.value); };
+      const sales = sum(L, x => x.total), cost = sum(its, i => i.lineCost), top = {};
+      its.forEach(i => { const t = top[i.itemId] || (top[i.itemId] = {name:i.name, qty:0, sales:0, profit:0}); t.qty += i.qty; t.sales += i.lineTotal; t.profit += i.lineTotal - i.lineCost; });
+      return {from:b.from, to:b.to, bills:L.length, sales, discount:sum(L, x => x.discount), cost, profit:Math.round(sales - cost), margin:sales ? Math.round((sales - cost) / sales * 1000) / 10 : 0,
+        averageBill:L.length ? Math.round(sales / L.length) : 0, byPayment:grp(L, 'paymentMethod', x => x.total), byOrderType:grp(L, 'orderType', x => x.total),
+        byCategory:grp(its, 'category', i => i.lineTotal), byDay:grp(L, 'date', x => x.total).sort((p, q) => p.name.localeCompare(q.name)),
+        byHour:grp(L.map(x => ({...x, h:x.time.slice(0,2)})), 'h', x => x.total).sort((p, q) => p.name.localeCompare(q.name)),
+        topItems:Object.values(top).sort((p, q) => q.qty - p.qty).slice(0, 10), lowStock:menu.filter(m => m.trackStock && m.stock <= m.lowStock),
+        itemsWithoutCost:menu.filter(m => m.hasCost === false).map(m => m.name)}; }
+    if (b.action === 'getBill'){ const x = bills.find(k => k.billNo === b.billNo); return x && {...x, items:x.items.map(({lineCost, category, ...i}) => i)}; }
     E('Not available in demo.');
   };
 })();
@@ -333,7 +363,7 @@ function boot(){
   if (!S){ $('#login').hidden = false; $('#app').hidden = true; setTimeout(() => $('#lu').focus(), 50); return; }
   $('#login').hidden = true; $('#app').hidden = false;
   $('#who').textContent = `${S.user.name} · ${S.user.role}`;
-  $('#navMenu').hidden = S.user.role !== 'Owner';
+  $('#navMenu').hidden = $('#navDash').hidden = S.user.role !== 'Owner';
   show(VIEW); loadMenu();
 }
 async function loadMenu(){
@@ -351,7 +381,8 @@ $('#outBtn').onclick = () => logout();
 document.querySelector('.navs').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) show(b.dataset.view); });
 function show(v){
   VIEW = v; document.querySelectorAll('.navs button').forEach(b => b.dataset.view === v ? b.setAttribute('aria-current','page') : b.removeAttribute('aria-current'));
-  v === 'pos' ? renderPOS() : v === 'menu' ? renderMenu() : renderBills();
+  if (v === 'dash' && S.user.role !== 'Owner') v = VIEW = 'pos';
+  v === 'pos' ? renderPOS() : v === 'menu' ? renderMenu() : v === 'dash' ? renderDash() : renderBills();
 }
 
 /* ===== POS ===== */
@@ -510,8 +541,7 @@ async function renderMenu(){
     ${cats.map(c => { const list = MENU.filter(m => m.category === c); return `<h3 style="margin:6px 0 8px;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${catColor(c)}"></span>${esc(c)} <span class="muted" style="margin:0;font-size:14px;font-weight:600">(${list.length})</span></h3>` + (list.length ? `<ul class="mlist">${list.map(m => `<li class="${m.active ? '' : 'off'}"><button data-edit="${esc(m.itemId)}">
       <span class="thumb" style="${m.image ? `background-image:url('${esc(m.image)}')` : ''}">${m.image ? '' : esc(m.name[0] || '?')}</span>
       <span class="g"><b>${esc(m.name)}</b><br><span class="m">${esc(m.itemId)}${m.active ? '' : ' · hidden'}${m.trackStock ? ` · ${m.stock} in stock` : ''}${m.image ? '' : ' · no photo'}</span></span>
-      <span class="num" style="text-align:right"><b>${rs(m.price)}</b><br>${m.hasCost === false ? '<span class="m" style="color:var(--chili);font-weight:700">No cost price</span>'
-        : `<span class="m">Cost ${rs(m.cost)} · <span style="color:${m.price - m.cost < 0 ? 'var(--chili)' : 'var(--leaf)'};font-weight:700">${m.price - m.cost < 0 ? '−' : '+'}${rs(Math.abs(m.price - m.cost))}</span></span>`}</span></button></li>`).join('')}</ul>` : '<p class="muted">No items yet.</p>'); }).join('')}</div>`;
+      <span class="num" style="text-align:right"><b>${rs(m.price)}</b>${m.hasCost === false ? '<br><span class="m" style="color:var(--chili);font-weight:700">Add cost price</span>' : ''}</span></button></li>`).join('')}</ul>` : '<p class="muted">No items yet.</p>'); }).join('')}</div>`;
 }
 let EDIT = null;
 function editItem(id){
@@ -532,7 +562,7 @@ function editItem(id){
       <div></div></div>
     <div class="two"><div><label for="eCost">Cost price (Rs)</label><input class="in num" id="eCost" inputmode="decimal" value="${m.itemId && m.hasCost !== false ? esc(m.cost) : ''}" placeholder="To make or buy"></div>
       <div><label for="ePrice">Selling price (Rs)</label><input class="in num" id="ePrice" inputmode="numeric" value="${esc(m.price)}"></div></div>
-    <div class="profit num" id="eProfit"></div>
+
     <label class="chk"><input type="checkbox" id="eActive" ${m.active ? 'checked' : ''}> Show on the bill screen</label>
     <label class="chk"><input type="checkbox" id="eTrack" ${m.trackStock ? 'checked' : ''}> Track stock for this item</label>
     <div class="two" id="stockBox" ${m.trackStock ? '' : 'hidden'}><div><label for="eLow">Warn when stock is at</label><input class="in num" id="eLow" inputmode="numeric" value="${esc(m.lowStock)}"></div>
@@ -541,12 +571,6 @@ function editItem(id){
     ${m.itemId ? `<button class="btn ghost" id="eDel" style="width:100%;margin-top:8px;color:var(--chili)">Remove from menu</button>` : ''}`;
   document.body.append(s, d);
   d.dataset.id = m.itemId;
-  const showProfit = () => { const c = $('#eCost').value, p = N($('#ePrice').value), el = $('#eProfit');
-    if (c === '' || !p){ el.className = 'profit'; el.textContent = 'Enter both prices to see the profit.'; return; }
-    const pr = p - N(c), mg = Math.round(pr / p * 1000) / 10;
-    el.className = 'profit ' + (pr < 0 ? 'loss' : 'gain');
-    el.innerHTML = pr < 0 ? `Loss of <b>${rs(-pr)}</b> on each one. The cost is higher than the selling price.` : `Profit <b>${rs(pr)}</b> on each one · <b>${mg}%</b> margin`; };
-  $('#eCost').oninput = showProfit; $('#ePrice').oninput = showProfit; showProfit();
   $('#eTrack').onchange = e => $('#stockBox').hidden = !e.target.checked;
   $('#eCat').onchange = e => { const n = $('#eNewCat'); n.hidden = e.target.value !== '__new'; if (!n.hidden) n.focus(); };
   const del = $('#eDel'); if (del) del.onclick = () => deleteItem(m);
@@ -573,7 +597,7 @@ async function saveItem(){
   const cat = $('#eCat').value === '__new' ? $('#eNewCat').value.trim() : $('#eCat').value;
   if (!cat){ toast('Type a name for the new category.', {bad:true}); $('#eNewCat').focus(); return; }
   if ($('#eCost').value.trim() === ''){ toast('Enter the cost price (what it costs you to make or buy).', {bad:true}); $('#eCost').focus(); return; }
-  if (N($('#eCost').value) > N($('#ePrice').value) && !confirm('The cost is higher than the selling price, so you’ll lose money on each one. Save anyway?')) return;
+  if (N($('#eCost').value) > N($('#ePrice').value) && !confirm('The cost price is higher than the selling price. Save anyway?')) return;
   const item = {itemId:id || undefined, name:$('#eName').value, category:cat, price:$('#ePrice').value, cost:$('#eCost').value,
     active:$('#eActive').checked, trackStock:$('#eTrack').checked, lowStock:$('#eLow').value,
     imageData:EDIT.imageData || undefined, removeImage:EDIT.removeImage || undefined};
@@ -598,6 +622,61 @@ async function deleteItem(m){
     closeModal(); toast(r.categoryRemoved ? `Removed ${r.name} and the “${r.category}” category` : `Removed ${r.name}`); renderMenu();
   } catch(e){ toast(e.message, {bad:true}); b.disabled = false; b.textContent = 'Remove from menu'; }
 }
+/* ===== dashboard (owner only) ===== */
+const lkDate = (d = new Date()) => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Colombo'}).format(d);
+const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
+let DP = 'today', DR = {from:'', to:''};
+function dashRange(){
+  const t = lkDate(), dow = (new Date(t + 'T12:00:00Z').getUTCDay() + 6) % 7;
+  if (DP === 'today') return {from:t, to:t, label:'Today'};
+  if (DP === 'yesterday'){ const y = addDays(t, -1); return {from:y, to:y, label:'Yesterday'}; }
+  if (DP === 'week') return {from:addDays(t, -dow), to:t, label:'This week'};
+  if (DP === 'month') return {from:t.slice(0,8) + '01', to:t, label:'This month'};
+  return {from:DR.from || t, to:DR.to || DR.from || t, label:'Custom dates'};
+}
+async function renderDash(){
+  const r = dashRange();
+  const chips = [['today','Today'],['yesterday','Yesterday'],['week','This week'],['month','This month'],['custom','Pick dates']]
+    .map(([k, l]) => `<button data-dp="${k}" aria-pressed="${DP === k}">${l}</button>`).join('');
+  $('#view').innerHTML = `<div class="page"><h2>Dashboard</h2><p class="muted">${r.label} · ${r.from === r.to ? r.from : r.from + ' to ' + r.to}</p>
+    <div class="cats">${chips}</div>
+    ${DP === 'custom' ? `<div class="bar"><input class="in" type="date" id="dFrom" value="${r.from}" aria-label="From"><input class="in" type="date" id="dTo" value="${r.to}" aria-label="To"><button class="btn dark" id="dGo">Show</button></div>` : ''}
+    <div id="dBody"><p class="muted">Loading…</p></div></div>`;
+  let d;
+  try { d = await api('dashboard', {from:r.from, to:r.to}); } catch(e){ $('#dBody').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (VIEW !== 'dash') return;
+  const bars = (list, fmt = rs) => { const max = Math.max(1, ...list.map(x => x.value));
+    return list.length ? list.map(x => `<div class="hb num"><span>${esc(x.name)}</span><div class="t"><i style="width:${x.value / max * 100}%"></i></div><span class="v">${fmt(x.value)}</span></div>`).join('') : '<div class="empty" style="padding:12px">No sales in this period.</div>'; };
+  const hours = (d.byHour || []).map(h => ({name:h.name + ':00', value:h.value}));
+  $('#dBody').innerHTML = `
+    ${d.itemsWithoutCost && d.itemsWithoutCost.length ? `<div class="warn"><b>${d.itemsWithoutCost.length} item${d.itemsWithoutCost.length === 1 ? '' : 's'} have no cost price</b>, so profit may look higher than it is. Add it in Menu: ${esc(d.itemsWithoutCost.slice(0,4).join(', '))}${d.itemsWithoutCost.length > 4 ? '…' : ''}</div>` : ''}
+    <div class="dk num">
+      <div><small>Sales</small><b>${rs(d.sales)}</b></div>
+      <div class="pf ${d.profit < 0 ? 'neg' : ''}"><small>Profit</small><b>${rs(d.profit)}</b></div>
+      <div class="pf ${d.margin < 0 ? 'neg' : ''}"><small>Margin</small><b>${d.margin}%</b></div>
+      <div><small>Bills</small><b>${d.bills}</b></div>
+      <div><small>Average bill</small><b>${rs(d.averageBill)}</b></div>
+      <div><small>Discounts given</small><b>${rs(d.discount)}</b></div>
+    </div>
+    <div class="dcard"><h3>Top items</h3>${d.topItems.length ? `<table class="tbl num"><thead><tr><th>Item</th><th class="r">Sold</th><th class="r">Sales</th><th class="r">Profit</th></tr></thead><tbody>
+      ${d.topItems.map(i => `<tr><td>${esc(i.name)}</td><td class="r">${i.qty}</td><td class="r">${rs(i.sales)}</td><td class="r" style="color:${i.profit < 0 ? 'var(--chili)' : 'var(--leaf)'}">${rs(i.profit)}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="empty" style="padding:12px">No sales in this period.</div>'}</div>
+    <div class="d2">
+      <div class="dcard"><h3>By category</h3>${bars(d.byCategory)}</div>
+      <div class="dcard"><h3>By payment</h3>${bars(d.byPayment)}</div>
+      <div class="dcard"><h3>Dine-in vs Takeaway</h3>${bars(d.byOrderType)}</div>
+      <div class="dcard"><h3>${d.from === d.to ? 'By hour' : 'By day'}</h3>${bars(d.from === d.to ? hours : d.byDay)}</div>
+    </div>
+    <div class="dcard"><h3>Low stock</h3>${d.lowStock.length ? d.lowStock.map(i => `<div class="hb num"><span>${esc(i.name)}</span><span></span><span class="v" style="color:var(--chili)">${i.stock} left</span></div>`).join('') : '<div class="empty" style="padding:12px">All tracked items have enough stock.</div>'}</div>
+    <button class="btn ghost" style="width:100%" id="dRef">Refresh</button>`;
+}
+document.addEventListener('click', e => {
+  if (VIEW !== 'dash') return;
+  const c = e.target.closest('[data-dp]'); if (c){ DP = c.dataset.dp; renderDash(); return; }
+  if (e.target.id === 'dGo'){ DR = {from:$('#dFrom').value, to:$('#dTo').value}; if (DR.to && DR.from > DR.to){ toast('The start date is after the end date.', {bad:true}); return; } renderDash(); }
+  if (e.target.id === 'dRef') renderDash();
+});
+
 document.addEventListener('click', e => { if (VIEW === 'menu'){ const b = e.target.closest('[data-edit]'); if (b) editItem(b.dataset.edit); } });
 
 boot();
